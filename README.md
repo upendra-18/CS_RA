@@ -354,8 +354,10 @@ Features:
 
 ## 🧩 System Design
 User Input → Feature Engineering → Model → Risk Score
+
 ↓
 Strategy Engine
+
 ↓
 Action Recommendation
 
@@ -373,13 +375,21 @@ Action Recommendation
 
 ## 📁 Project Structure
 ├── data/ 
+
 ├── notebooks/ 
+
 ├── model/ 
+
 │ ├── final_model.pkl 
+
 ├── app/ 
+
 │ └── streamlit_app.py 
+
 ├── utils.py 
+
 ├── requirements.txt 
+
 
 ---
 
