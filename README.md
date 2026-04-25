@@ -257,13 +257,21 @@ Action Recommendation
 
 ## 📁 Project Structure
 ├── data/
+
 ├── notebooks/
+
 ├── model/
+
 │ ├── final_model.pkl
+
 │ └── feature_names.pkl
+
 ├── app/
+
 │ └── streamlit_app.py
+
 ├── utils.py
+
 ├── requirements.txt
 
 
