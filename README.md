@@ -406,5 +406,5 @@ Action Recommendation
 ## 💥 Final Statement
 
 > This is not just a churn model.
-> It is a **decision-making system** that connects:
+It is a **decision-making system** that connects:
 Data → Behavior → Prediction → Business Action
