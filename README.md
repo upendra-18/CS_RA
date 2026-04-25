@@ -1,45 +1,51 @@
 # 🚀 Customer Retention & Churn Intelligence System
 
-> End-to-end **data → insights → ML → business strategy → product (Streamlit)** pipeline  
+> End-to-end **Data → Insights → ML → Strategy → Product (Streamlit)** pipeline  
 > Focus: **Retention-first decision system**, not just churn prediction
 
 ---
 
 ## 📌 Problem Statement
 
-Most e-commerce businesses optimize for **customer acquisition**, but lose a majority of users after the first purchase.
+Most e-commerce platforms struggle not with acquiring users—but **retaining them**.
 
 This project answers:
 
 - Who is likely to churn?
 - Why are they churning?
-- What action should we take to retain them?
+- What action should we take?
+- Where should we NOT spend resources?
 
 ---
 
 ## 📊 Dataset
 
-- Source: Brazilian E-commerce (Olist)
+- Brazilian E-commerce Dataset (Olist)
 - ~100K orders
-- ~96K unique customers
+- ~96K customers
+- Multi-table relational structure:
+  - Orders
+  - Customers
+  - Payments
+  - Reviews
 
 ---
 
 ## 🏗️ Data Pipeline
+Raw Tables → Order-Level Dataset → Customer-Level Dataset → ML Dataset
 
-### 1. Data Engineering
+### Key Steps
 
-- Merged multiple relational tables (orders, customers, payments, reviews)
-- Converted raw logs → **order-level dataset**
-- Aggregated → **customer-level dataset**
-Raw Tables → Order Level → Customer Level → Model Dataset
-
+- Joined multiple tables (orders, payments, reviews)
+- Built **order-level features**
+- Aggregated to **customer-level behavior**
+- Created **RFM + behavioral + risk features**
 
 ---
 
-### 2. Feature Engineering
+## 🧠 Feature Engineering
 
-#### Core Features
+### Core Features
 
 - `total_orders`
 - `monetary`
@@ -49,78 +55,179 @@ Raw Tables → Order Level → Customer Level → Model Dataset
 - `avg_time_between_orders`
 - `avg_review_score`
 
-#### Advanced Features
+---
 
-- `experience_score = reviews - penalties (late + cancel)`
-- `engagement_score = orders / time gap`
-- `value_density = spend / frequency`
-- `order_consistency = 1 / (std + 1)`
-- `risk_score = late_ratio × cancellations`
-- `gap_trend = purchase interval trend`
+### Advanced Behavioral Features
+
+- `experience_score`
+- `engagement_score`
+- `value_density`
+- `order_consistency`
+- `risk_score`
+- `bad_experience`
+- `review_std_proxy`
+- `gap_trend`
 
 ---
 
-## 📈 Key Business Insights
-
-### 🔥 1. Retention is the real problem
-
-- ~80%+ users are **Low Value + Potential**
-- Strong acquisition, weak retention
-
-**Action:**  
-Shift focus → **Retention over Acquisition**
+## 📈 Deep Business Insights
 
 ---
 
-### 🔥 2. One-time users dominate
+### 🔥 1. Majority of users are NOT worth heavy retention
 
-- Majority of customers make only **1 purchase**
+- ~80%+ users fall into **Low Value / Potential**
 
-**Action:**  
-Separate strategy for **first-time users**
+**Meaning:**
+- Heavy discounts for all users = wasted money
 
----
-
-### 🔥 3. Critical retention window
-
-- Most churn happens within **0–90 days**
-
-**Action:**  
-Trigger retention campaigns early
+**Recommendation:**
+- Focus only on **high-value + at-risk users**
 
 ---
 
-### 🔥 4. Delivery is NOT main driver
+### 🔥 2. One-time buyers dominate the system
 
-- Late delivery is NOT the primary cause of churn
+- Huge proportion of users make only **1 purchase**
 
-**Action:**  
-Focus on **engagement + behavior**
+**Meaning:**
+- Churn prediction becomes trivial but useless
 
----
-
-### 🔥 5. Value segmentation is critical
-
-- Different customers behave differently
-
-**Action:**  
-Use **personalized retention strategies**
+**Recommendation:**
+- Separate pipeline:
+  - **Repeat prediction instead of churn prediction**
+  - Build early conversion strategy
 
 ---
 
-## 🧠 Customer Segmentation (RFM)
+### 🔥 3. First 30–90 days decide retention
+
+- Most churn happens early
+
+**Meaning:**
+- Waiting too long = lost user
+
+**Recommendation:**
+- Trigger interventions:
+  - Day 3 → engagement
+  - Day 7 → recommendation
+  - Day 14 → discount
+
+---
+
+### 🔥 4. Payment behavior signals intent
+
+- Users using **voucher / boleto combos** show different patterns
+
+**Meaning:**
+- Payment behavior reflects engagement and seriousness
+
+**Recommendation:**
+- Use payment behavior for segmentation
+
+---
+
+### 🔥 5. Late delivery is NOT the main churn driver
+
+- Weak correlation with churn
+
+**Meaning:**
+- Logistics alone won’t fix retention
+
+**Recommendation:**
+- Focus on:
+  - Engagement
+  - Personalization
+  - Value perception
+
+---
+
+### 🔥 6. Customer experience matters (but not alone)
+
+- Poor reviews + cancellations → higher churn
+
+**Meaning:**
+- Experience contributes but doesn’t fully explain churn
+
+**Recommendation:**
+- Combine:
+  - Experience + engagement + frequency
+
+---
+
+### 🔥 7. Time-gap behavior is critical
+
+- Large gaps between orders → high churn probability
+
+**Meaning:**
+- Time inactivity is strongest churn signal
+
+**Recommendation:**
+- Monitor **gap patterns**
+- Trigger alerts before threshold
+
+---
+
+### 🔥 8. High spend ≠ loyalty
+
+- Some high spenders still churn
+
+**Meaning:**
+- Monetary value alone is misleading
+
+**Recommendation:**
+- Combine:
+  - Spend + frequency + recency
+
+---
+
+### 🔥 9. Behavioral consistency predicts loyalty
+
+- Stable order values → loyal users
+
+**Meaning:**
+- Consistency = trust signal
+
+**Recommendation:**
+- Prioritize consistent users for retention campaigns
+
+---
+
+### 🔥 10. Not all churn is worth preventing
+
+- Some users:
+  - Low spend
+  - Low engagement
+  - High inactivity
+
+**Meaning:**
+- They will churn regardless
+
+**Recommendation:**
+- **Do NOT spend retention budget on them**
+
+---
+
+## 🧠 Customer Segmentation (RFM-Based)
 
 Segments:
 
-- **High Value** → repeat + high spend
-- **Loyal** → repeat moderate users
-- **Potential** → new but promising
-- **At Risk** → inactive repeat users
-- **Low Value** → low spend, inactive
+- **High Value**
+- **Loyal**
+- **Potential**
+- **At Risk**
+- **Low Value**
 
 ---
 
-## 🤖 Churn Prediction Model
+### Key Observation
+Low Value + Potential ≈ Majority of users
+
+👉 This drives **cost-optimized strategy**
+
+---
+
+## 🤖 Churn Model
 
 ### 🎯 Goal
 
@@ -128,46 +235,52 @@ Predict churn **before it happens**
 
 ---
 
-### 📌 Labeling Strategy
+### Labeling Strategy
 Churn = recency > 75th percentile
 
+---
+
+### Model
+
+- XGBoost
+- Optimized for PR-AUC
+- Class imbalance handled
 
 ---
 
-### ⚙️ Model
+### Performance
 
-- Algorithm: **XGBoost**
-- Optimized for: **PR-AUC**
-- Handles imbalance using: `scale_pos_weight`
-
----
-
-### 📊 Performance
-
-| Metric      | Value |
-|------------|------|
-| Recall     | 0.81 |
-| Precision  | 0.28 |
-| ROC-AUC    | 0.71 |
-| PR-AUC     | 0.33 |
-
-👉 Focus: **High Recall (capture churners)**
+| Metric     | Value |
+|-----------|------|
+| Recall    | ~0.81 |
+| Precision | ~0.28 |
+| ROC-AUC   | ~0.71 |
+| PR-AUC    | ~0.33 |
 
 ---
 
-## 🎯 Business Strategy Engine (CORE)
+### Why High Recall?
+
+- Missing a churned customer = lost revenue
+- False positives = acceptable (email cost is low)
 
 ---
 
-### 🔹 Multi-Order Customers (>1 orders)
+## 🎯 Strategy Engine (MOST IMPORTANT PART)
 
-#### Value Segmentation
+---
+
+## 🔹 Multi-Order Customers (>1 orders)
+
+### Step 1: Value Segmentation
 
 - High
 - Medium
 - Low
 
-#### Risk Segmentation
+---
+
+### Step 2: Risk Segmentation
 
 - High Risk
 - Medium Risk
@@ -177,47 +290,52 @@ Churn = recency > 75th percentile
 
 ### 🔥 Action Matrix
 
-| Value ↓ / Risk → | High Risk                         | Medium Risk              | Low Risk        |
-|-----------------|----------------------------------|--------------------------|-----------------|
-| High Value      | Voucher + strong retention       | Personalized engagement  | Light touch     |
-| Medium Value    | Small discount                   | Reminder                 | Passive         |
-| Low Value       | Reminder only                    | Minimal                  | Ignore          |
+| Value ↓ / Risk → | High Risk                    | Medium Risk         | Low Risk     |
+|-----------------|----------------------------|--------------------|-------------|
+| High Value      | Voucher + strong retention | Personalized email | Light touch |
+| Medium Value    | Small discount             | Reminder           | Passive     |
+| Low Value       | Reminder only              | Minimal            | Ignore      |
 
 ---
 
-### 🔹 One-Order Customers Strategy
+## 🔹 One-Order Customers Strategy
 
-Instead of churn prediction → **predict repeat intent**
-
----
-
-#### Scoring Logic
-
-- High order value
-- Good review
-- No late delivery
-- No boleto usage
+### Key Shift
+Don’t predict churn → Predict repeat intent
 
 ---
 
-#### Buckets
+### Scoring System
+
+- High spend → +2
+- Good review → +2
+- No delay → +1
+- No boleto → +1
+
+---
+
+### Buckets
 
 - **Potential**
 - **Low Intent**
 
 ---
 
-#### Action Plan
+### Action Engine
 
-**Potential Users**
-- Day 0–3 → Wait  
-- Day 3–7 → Recommendations  
-- Day 7–14 → Discount  
-- Day 14+ → Urgency  
+#### Potential Users
 
-**Low Intent Users**
-- Early → Soft reminder  
-- Late → Drop  
+- Day 0–3 → Wait
+- Day 3–7 → Recommendations
+- Day 7–14 → Discount
+- Day 14+ → Urgency
+
+---
+
+#### Low Intent Users
+
+- Early → Soft reminder
+- Later → Drop user
 
 ---
 
@@ -227,68 +345,57 @@ Features:
 
 - Segmented UI (1-order vs multi-order)
 - Real-time churn prediction
-- Automated action recommendation
+- Action recommendation engine
 - Probability gauge visualization
 - SaaS-style dashboard
+- History tracking
 
 ---
 
 ## 🧩 System Design
-
 User Input → Feature Engineering → Model → Risk Score
 ↓
-Business Logic Engine
+Strategy Engine
 ↓
 Action Recommendation
-
-
 
 ---
 
 ## 🚀 Key Takeaways
 
-- Churn prediction alone is NOT enough
+- Churn prediction alone is not useful
 - Retention strategy is the real value
 - First purchase → second purchase is critical
-- Personalization > generic campaigns
-- ML + business logic > ML alone
+- Not all customers are worth saving
+- ML must be combined with business logic
 
 ---
 
 ## 📁 Project Structure
-├── data/
-
-├── notebooks/
-
-├── model/
-
-│ ├── final_model.pkl
-
-│ └── feature_names.pkl
-
-├── app/
-
-│ └── streamlit_app.py
-
-├── utils.py
-
-├── requirements.txt
-
+├── data/ 
+├── notebooks/ 
+├── model/ 
+│ ├── final_model.pkl 
+├── app/ 
+│ └── streamlit_app.py 
+├── utils.py 
+├── requirements.txt 
 
 ---
 
 ## ⚡ Future Improvements
 
+- Real-time event tracking
 - Time-series churn modeling
-- Real-time pipeline
-- A/B testing
 - CRM integration
-- LTV prediction
+- A/B testing for strategies
+- Customer Lifetime Value (CLV)
 
 ---
 
 ## 💥 Final Statement
 
-> This is not just a churn model.  
-> It is a **decision-making system** that connects:
+> This is not just a churn model.
+
+It is a **decision-making system** that connects:
 Data → Behavior → Prediction → Business Action
