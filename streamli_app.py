@@ -10,11 +10,8 @@ st.title("Customer Retention Engine")
 with open('model/final_model.pkl', 'rb') as f:
     model = pickle.load(f)
 
-with open('model/feature_names.pkl', 'rb') as f:
-    feature_names = pickle.load(f)
-
 # -------------------------
-# LOGIC FUNCTIONS (from utils.py)
+# LOGIC FUNCTIONS
 # -------------------------
 
 def one_order_logic(row):
@@ -61,7 +58,6 @@ def one_order_logic(row):
 
 def multi_order_logic(row, proba):
 
-    # VALUE SEGMENT
     if row['monetary'] > 500 and row['total_orders'] > 3:
         value = 'High'
     elif row['monetary'] > 200:
@@ -69,7 +65,6 @@ def multi_order_logic(row, proba):
     else:
         value = 'Low'
 
-    # RISK
     if proba >= 0.5:
         risk = 'High Risk'
     elif proba >= 0.3:
@@ -77,7 +72,6 @@ def multi_order_logic(row, proba):
     else:
         risk = 'Low Risk'
 
-    # ACTION
     if risk == 'High Risk':
         if value == 'High':
             action = 'Voucher + Strong Retention'
@@ -92,45 +86,46 @@ def multi_order_logic(row, proba):
 
     return value, risk, action
 
+
 # -------------------------
 # INPUT UI
 # -------------------------
 
-total_orders = st.number_input("Total Orders", min_value=1, step=1)
+total_orders = st.number_input("Total Orders (count)", min_value=1, step=1)
 
 data = {"total_orders": int(total_orders)}
 
 # -------------------------
-# 1-ORDER UI
+# 1-ORDER
 # -------------------------
 if total_orders == 1:
 
     st.subheader("1-Order Customer Inputs")
 
     data.update({
-        "amount": st.number_input("Order Amount", min_value=0.0),
-        "review_score": st.slider("Review Score", 1, 5),
-        "is_late": st.selectbox("Late Delivery", [0, 1]),
-        "is_boleto": st.selectbox("Boleto", [0, 1]),
-        "days_since_order": st.number_input("Days Since Order", min_value=0)
+        "amount": st.number_input("Order Amount (₹)", min_value=0.0),
+        "review_score": st.slider("Review Score (1–5)", 1, 5),
+        "is_late": st.selectbox("Was Delivery Late? (0=No, 1=Yes)", [0,1]),
+        "is_boleto": st.selectbox("Payment via Boleto? (0=No, 1=Yes)", [0,1]),
+        "days_since_order": st.number_input("Days Since Order (days)", min_value=0)
     })
 
 # -------------------------
-# MULTI-ORDER UI
+# MULTI-ORDER
 # -------------------------
 else:
 
     st.subheader("Multi-Order Customer Inputs")
 
     data.update({
-        "monetary": st.number_input("Total Spend", min_value=0.0),
-        "avg_order_value": st.number_input("Avg Order Value", min_value=0.0),
-        "late_ratio": st.number_input("Late Ratio", min_value=0.0, max_value=1.0),
-        "cancel_count": st.number_input("Cancel Count", min_value=0),
-        "late_count": st.number_input("Late Count", min_value=0),
-        "avg_time_between_orders": st.number_input("Avg Time Between Orders", min_value=0.0),
-        "avg_review_score": st.number_input("Avg Review Score", min_value=0.0, max_value=5.0),
-        "order_value_std": st.number_input("Order Value Std", min_value=0.0)
+        "monetary": st.number_input("Total Spend (₹)", min_value=0.0),
+        "avg_order_value": st.number_input("Average Order Value (₹)", min_value=0.0),
+        "late_ratio": st.number_input("Late Delivery Ratio (0–1)", min_value=0.0, max_value=1.0),
+        "cancel_count": st.number_input("Total Cancellations (count)", min_value=0),
+        "late_count": st.number_input("Total Late Deliveries (count)", min_value=0),
+        "avg_time_between_orders": st.number_input("Avg Time Between Orders (days)", min_value=0.0),
+        "avg_review_score": st.number_input("Avg Review Score (1–5)", min_value=0.0, max_value=5.0),
+        "order_value_std": st.number_input("Order Value Std Dev (₹)", min_value=0.0)
     })
 
 # -------------------------
@@ -150,9 +145,60 @@ if st.button("Predict"):
 
         df = pd.DataFrame([data])
 
-        # ensure correct feature order
-        df = df[feature_names]
+        # -------------------------
+        # FEATURE ENGINEERING
+        # -------------------------
 
+        df['recency_ratio'] = 1 / (df['avg_time_between_orders'] + 1)
+        df['order_consistency'] = 1 / (df['order_value_std'] + 1)
+
+        df['experience_score'] = (
+            df['avg_review_score'] -
+            (df['late_ratio'] * 2) -
+            (df['cancel_count'] * 0.5)
+        )
+
+        df['bad_experience'] = df['late_count'] + df['cancel_count']
+
+        df['value_density'] = df['monetary'] / (df['total_orders'] + 1)
+
+        df['engagement_score'] = df['total_orders'] / (df['avg_time_between_orders'] + 1)
+
+        df['risk_score'] = df['late_ratio'] * df['cancel_count']
+
+        df['review_std_proxy'] = abs(df['avg_review_score'] - 3)
+
+        df['gap_trend'] = 0  # cannot compute from single input
+
+        # -------------------------
+        # FINAL FEATURE ORDER
+        # -------------------------
+        features = [
+            'total_orders',
+            'monetary',
+            'avg_order_value',
+            'late_ratio',
+            'cancel_count',
+            'late_count',
+            'avg_time_between_orders',
+            'avg_review_score',
+            'order_value_std',
+            'recency_ratio',
+            'order_consistency',
+            'experience_score',
+            'bad_experience',
+            'value_density',
+            'engagement_score',
+            'risk_score',
+            'review_std_proxy',
+            'gap_trend'
+        ]
+
+        df = df[features]
+
+        # -------------------------
+        # MODEL PREDICTION
+        # -------------------------
         proba = model.predict_proba(df)[0][1]
 
         value, risk, action = multi_order_logic(data, proba)
@@ -160,6 +206,6 @@ if st.button("Predict"):
         st.success("Multi-Order Strategy")
 
         st.write(f"Churn Probability: {proba:.4f}")
-        st.write("Customer Value:", value)
+        st.write("Customer Value Segment:", value)
         st.write("Risk Level:", risk)
         st.write("Recommended Action:", action)
