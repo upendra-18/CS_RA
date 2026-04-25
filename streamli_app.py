@@ -1,6 +1,7 @@
 import streamlit as st
 import pickle
 import pandas as pd
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Retention Engine", layout="wide")
 
@@ -11,7 +12,13 @@ with open('model/final_model.pkl', 'rb') as f:
     model = pickle.load(f)
 
 # -------------------------
-# CUSTOM STYLING (SaaS look)
+# SESSION HISTORY
+# -------------------------
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+# -------------------------
+# STYLING
 # -------------------------
 st.markdown("""
 <style>
@@ -57,19 +64,18 @@ def one_order_logic(row):
 
     if bucket == 'Potential':
         if days <= 3:
-            return 'No Action', 'Wait'
+            return "No Action", "Wait"
         elif days <= 7:
-            return 'Recommendation', 'Show relevant products'
+            return "Recommendation", "Show similar products"
         elif days <= 14:
-            return 'Discount', 'Offer 10% discount'
+            return "Discount", "Offer 10% coupon"
         else:
-            return 'Urgency', 'Last chance offer'
+            return "Urgency", "Last chance offer"
     else:
         if days <= 10:
-            return 'Reminder', 'Soft engagement'
+            return "Reminder", "Soft engagement"
         else:
-            return 'Drop', 'No action'
-
+            return "Drop", "No action"
 
 def multi_order_logic(row, proba):
 
@@ -96,27 +102,28 @@ def multi_order_logic(row, proba):
 
     return value, risk, action
 
-
 # -------------------------
-# INPUT FORMS
+# INPUT UI
 # -------------------------
 data = {}
 
 col1, col2 = st.columns(2)
 
+# ---------- 1 ORDER ----------
 if customer_type == "One Order":
 
     with col1:
         data['amount'] = st.number_input("Order Amount (₹)", 0.0)
         data['review_score'] = st.slider("Review Score (1–5)", 1, 5)
-        data['days_since_order'] = st.number_input("Days Since Order", 0)
+        data['days_since_order'] = st.number_input("Days Since Order (days)", 0)
 
     with col2:
-        data['is_late'] = st.selectbox("Late Delivery", [0,1])
-        data['is_boleto'] = st.selectbox("Boleto Payment", [0,1])
+        data['is_late'] = st.selectbox("Late Delivery (0/1)", [0,1])
+        data['is_boleto'] = st.selectbox("Boleto Payment (0/1)", [0,1])
 
     data['total_orders'] = 1
 
+# ---------- MULTI ORDER ----------
 else:
 
     with col1:
@@ -132,12 +139,12 @@ else:
         data['avg_review_score'] = st.number_input("Avg Review (1–5)", 0.0, 5.0)
         data['order_value_std'] = st.number_input("Order Std Dev (₹)", 0.0)
 
-
 # -------------------------
-# PREDICT BUTTON
+# PREDICT
 # -------------------------
 if st.button("🚀 Analyze Customer"):
 
+    # ---------- 1 ORDER ----------
     if customer_type == "One Order":
 
         action, message = one_order_logic(data)
@@ -149,22 +156,19 @@ if st.button("🚀 Analyze Customer"):
         </div>
         """, unsafe_allow_html=True)
 
+    # ---------- MULTI ORDER ----------
     else:
 
         df = pd.DataFrame([data])
 
-        # -------------------------
-        # FEATURE ENGINEERING
-        # -------------------------
+        # feature engineering
         df['recency_ratio'] = 1 / (df['avg_time_between_orders'] + 1)
         df['order_consistency'] = 1 / (df['order_value_std'] + 1)
-
         df['experience_score'] = (
-            df['avg_review_score'] -
-            (df['late_ratio'] * 2) -
-            (df['cancel_count'] * 0.5)
+            df['avg_review_score']
+            - (df['late_ratio'] * 2)
+            - (df['cancel_count'] * 0.5)
         )
-
         df['bad_experience'] = df['late_count'] + df['cancel_count']
         df['value_density'] = df['monetary'] / (df['total_orders'] + 1)
         df['engagement_score'] = df['total_orders'] / (df['avg_time_between_orders'] + 1)
@@ -181,21 +185,45 @@ if st.button("🚀 Analyze Customer"):
 
         df = df[features]
 
+        # model
         proba = model.predict_proba(df)[0][1]
         value, risk, action = multi_order_logic(data, proba)
 
-        # -------------------------
-        # COLOR LOGIC
-        # -------------------------
-        color = "green"
-        if risk == "Medium Risk": color = "orange"
-        if risk == "High Risk": color = "red"
+        # store history
+        st.session_state.history.append(proba)
 
-        st.markdown(f"""
-        <div class="card">
-            <div class="metric">Churn Probability: {proba:.2f}</div>
-            <div class="metric {color}">Risk: {risk}</div>
-            <div class="metric">Value Segment: {value}</div>
-            <div class="metric">Action: {action}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        # gauge
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=proba,
+            title={'text': "Churn Risk"},
+            gauge={
+                'axis': {'range': [0, 1]},
+                'steps': [
+                    {'range': [0, 0.3], 'color': "green"},
+                    {'range': [0.3, 0.6], 'color': "orange"},
+                    {'range': [0.6, 1], 'color': "red"}
+                ]
+            }
+        ))
+
+        colA, colB = st.columns(2)
+
+        with colA:
+            st.plotly_chart(fig, use_container_width=True)
+
+        with colB:
+            st.markdown(f"""
+            <div class="card">
+                <div class="metric">Value: {value}</div>
+                <div class="metric">Risk: {risk}</div>
+                <div class="metric">Action: {action}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+# -------------------------
+# HISTORY
+# -------------------------
+if st.session_state.history:
+    st.subheader("📈 Prediction History")
+    st.line_chart(st.session_state.history)
